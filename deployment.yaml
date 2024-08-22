@@ -2,20 +2,18 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mydeploy
-  labels:
-    app: mydeploy1  # Added a label for better organization
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: mydeploy1  # Changed 'name' to 'app' for consistency with labels
+      name: mydeploy
   template:
     metadata:
       labels:
-        app: mydeploy1  # Changed 'name' to 'app' for consistency
+        name: mydeploy
     spec:
       containers:
       - name: mycontainer
-        image: mubii2/ci-pipeline:latest
+        image: mubii2/ci-pipeline:latest   # replace with your Docker-image pushed on Dockerhub
         ports:
         - containerPort: 8080
