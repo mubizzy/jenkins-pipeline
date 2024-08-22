@@ -92,16 +92,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: Copy K8s manifest files to Node Server
-        uses: appleboy/scp-action@v0.1.2
-        with:
-          host: '${{ secrets.NODE_IP }}'
-          username: '${{ env.EC2_NAME }}'
-          key: '${{ secrets.EC2_KEY }}'
-          source: |
-            deployment.yaml
-            service.yaml
-          target: '/home/${{ env.EC2_NAME }}/'
+
       - name: Deploy to Kubernetes
         run: >
           ssh -o StrictHostKeyChecking=no -i ${{ secrets.EC2_KEY }} ${{
@@ -111,5 +102,4 @@ jobs:
             kubectl rollout restart deploy
             kubectl get service
           EOF
-        env:
-          KUBECONFIG: '/home/${{ env.EC2_NAME }}/.kube/config'
+      
