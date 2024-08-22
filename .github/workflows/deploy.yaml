@@ -1,0 +1,76 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      DOCKER_USERNAME: mubii2
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Set up JDK 11
+      uses: actions/setup-java@v3
+      with:
+        java-version: '11'
+        distribution: 'adopt'
+
+    - name: Install Maven Dependencies
+      run: mvn install --no-snapshot-updates --batch-mode --no-transfer-progress -DskipTests=true
+
+    - name: Run Unit Tests
+      run: mvn test
+
+    - name: Build Project
+      run: mvn clean install
+
+    - name: Run Integration Tests
+      run: mvn verify
+
+    - name: Build Docker Image
+      run: |
+        JOB=$(echo $GITHUB_REPOSITORY | cut -d/ -f2 | tr '[:upper:]' '[:lower:]')
+        docker build -t $JOB:${GITHUB_RUN_NUMBER} ./jenkins-pipeline
+
+    - name: Tag Docker Image
+      run: |
+        JOB=$(echo $GITHUB_REPOSITORY | cut -d/ -f2 | tr '[:upper:]' '[:lower:]')
+        docker tag $JOB:${GITHUB_RUN_NUMBER} $DOCKER_USERNAME/$JOB:v${GITHUB_RUN_NUMBER}
+        docker tag $JOB:${GITHUB_RUN_NUMBER} $DOCKER_USERNAME/$JOB:latest
+
+    - name: Install Trivy
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+        echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+        sudo apt-get update
+        sudo apt-get install -y trivy
+
+    - name: Scan Docker Image
+      run: |
+        JOB=$(echo $GITHUB_REPOSITORY | cut -d/ -f2 | tr '[:upper:]' '[:lower:]')
+        trivy image $DOCKER_USERNAME/$JOB:v${GITHUB_RUN_NUMBER} > scan.txt
+        cat scan.txt
+
+    - name: Login to DockerHub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Push Docker Image to DockerHub
+      run: |
+        JOB=$(echo $GITHUB_REPOSITORY | cut -d/ -f2 | tr '[:upper:]' '[:lower:]')
+        docker push $DOCKER_USERNAME/$JOB:v${GITHUB_RUN_NUMBER}
+        docker push $DOCKER_USERNAME/$JOB:latest
+
+    - name: Cleanup Docker Images
+      run: docker image prune -af
