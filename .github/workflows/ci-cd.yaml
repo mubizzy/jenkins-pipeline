@@ -1,9 +1,10 @@
-name: CI Pipeline
+name: CI/CD Pipeline
 
 on:
   push:
     branches:
       - master
+  workflow_dispatch:
 
 jobs:
   build:
@@ -75,3 +76,46 @@ jobs:
 
     - name: Cleanup Docker Images
       run: docker image prune -af
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+
+    env:
+      NODE_IP: ${{ secrets.NODE_IP }}    # Store your Node Server's private IP in GitHub Secrets
+      EC2_NAME: ec2-user                 # AWS EC2 username
+      PROJECT_NAME: jenkins-pipeline     # Your project name
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Copy K8s manifest files to Node Server
+      uses: appleboy/scp-action@v0.1.2
+      with:
+        host: ${{ secrets.NODE_IP }}
+        username: ${{ env.EC2_NAME }}
+        key: ${{ secrets.EC2_KEY }}      # Store your EC2 PEM key in GitHub Secrets
+        source: |
+          deployment.yaml
+          service.yaml
+        target: /home/${{ env.EC2_NAME }}/
+
+    - name: Manual Approval
+      if: github.event_name == 'workflow_dispatch'
+      uses: hmarr/auto-approve-action@v2.0.0
+      with:
+        github-token: ${{ secrets.TOKEN_GITHUB }}
+      run: |
+        echo "Deployment approved. Continuing..."
+
+    - name: Deploy to Kubernetes
+      run: |
+        ssh -o StrictHostKeyChecking=no -i ${{ secrets.EC2_KEY }} ${{ env.EC2_NAME }}@${{ secrets.NODE_IP }} << EOF
+          kubectl apply -f /home/${{ env.EC2_NAME }}/deployment.yaml
+          kubectl apply -f /home/${{ env.EC2_NAME }}/service.yaml
+          kubectl rollout restart deploy
+          kubectl get service
+        EOF
+      env:
+        KUBECONFIG: /home/${{ env.EC2_NAME }}/.kube/config
