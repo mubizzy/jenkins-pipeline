@@ -6,12 +6,12 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      name: mydeploy1
+      app: mydeploy1
   template:
     metadata:
-      name: mypod1
+      app: mypod1
       labels:
-        name: mydeploy1
+        app: mydeploy1
     spec:
       containers:
       - name: mycontainer
