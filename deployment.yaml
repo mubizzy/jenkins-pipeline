@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mydeploy
+  labels:
+    app: mydeploy1  # Added a label for better organization
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mydeploy1  # Changed 'name' to 'app' for consistency with labels
+  template:
+    metadata:
+      labels:
+        app: mydeploy1  # Changed 'name' to 'app' for consistency
+    spec:
+      containers:
+      - name: mycontainer
+        image: mubii2/ci-pipeline:latest
+        ports:
+        - containerPort: 8080
