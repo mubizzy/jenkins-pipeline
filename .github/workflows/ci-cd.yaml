@@ -90,22 +90,6 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Copy K8s manifest files to Node Server
-      uses: appleboy/scp-action@v0.1.2
-      with:
-        host: ${{ secrets.NODE_IP }}
-        username: ${{ env.EC2_NAME }}
-        key: ${{ secrets.EC2_KEY }}      # Store your EC2 PEM key in GitHub Secrets
-        source: |
-          deployment.yaml
-          service.yaml
-        target: /home/${{ env.EC2_NAME }}/
-
-    - name: Manual Approval
-      uses: hmarr/auto-approve-action@v2.0.0
-      with:
-        github-token: ${{ secrets.TOKEN_GITHUB }}
-
     - name: Deploy to Kubernetes
       run: |
         ssh -o StrictHostKeyChecking=no -i ${{ secrets.EC2_KEY }} ${{ env.EC2_NAME }}@${{ secrets.NODE_IP }} << EOF
