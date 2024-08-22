@@ -37,7 +37,8 @@ jobs:
     - name: Build Docker Image
       run: |
         JOB=$(echo $GITHUB_REPOSITORY | cut -d/ -f2 | tr '[:upper:]' '[:lower:]')
-        docker build -t $JOB:${GITHUB_RUN_NUMBER} ./jenkins-pipeline
+        docker build -t $JOB:${GITHUB_RUN_NUMBER} .
+        # Update the path to the directory containing the Dockerfile if needed
 
     - name: Tag Docker Image
       run: |
